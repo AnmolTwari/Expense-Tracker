@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ExpenseTracker</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="container">
+    <!-- Header with Logout -->
+    <div class="header">
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin: 0 auto; width: 100%;">
+            <h1 style="margin: 0;">Expense Tracker</h1>
+            <div>
+                <span style="color: #667eea; font-weight: 600; margin-right: 20px;" th:text="'Welcome, ' + ${user.username}"></span>
+                <a class="btn btn-primary" th:href="@{/logout}" style="display: inline-block;">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Expense Button -->
+    <div class="card">
+        <div class="dashboard-actions">
+            <a class="btn btn-primary" th:href="@{/new}">+ Add New Transaction</a>
+
+            <form class="filter-form" th:action="@{/}" method="get">
+                <input type="text" name="search" class="form-control search-input"
+                       placeholder="Search by title or category"
+                       th:value="${searchQuery}" />
+
+                <select name="category" class="form-control filter-select">
+                    <option value="" th:selected="${selectedCategory == ''}">All Categories</option>
+                    <option value="Income" th:selected="${selectedCategory == 'Income'}">Income</option>
+                    <option value="Expense" th:selected="${selectedCategory == 'Expense'}">Expense</option>
+                </select>
+
+                <button type="submit" class="btn btn-secondary">Search</button>
+                <a th:if="${(searchQuery != null and !searchQuery.isEmpty()) or (selectedCategory != null and !selectedCategory.isEmpty())}" th:href="@{/}" class="btn cancel">Clear</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Financial Summary Section -->
+    <div class="card">
+        <h2 style="text-align: center; color: #667eea; margin-bottom: 30px; font-size: 1.8em;">Financial Summary</h2>
+        <div class="summary-grid">
+            <div class="summary-item balance">
+                <h3>Total Balance</h3>
+                <p th:text="'₹ ' + ${#numbers.formatDecimal(totalBalance, 1, 2)}">₹ 0.00</p>
+            </div>
+            <div class="summary-item income">
+                <h3>Total Income</h3>
+                <p th:text="'₹ ' + ${#numbers.formatDecimal(totalIncome, 1, 2)}">₹ 0.00</p>
+            </div>
+            <div class="summary-item expense">
+                <h3>Total Expense</h3>
+                <p th:text="'₹ ' + ${#numbers.formatDecimal(totalExpense, 1, 2)}">₹ 0.00</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Income vs Expense Chart -->
+    <div class="card">
+        <h2 style="text-align: center; color: #667eea; margin-bottom: 30px; font-size: 1.6em;">Income vs Expense Overview</h2>
+        <div class="chart-container">
+            <canvas id="expensePieChart" style="max-width: 300px; max-height: 300px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Expense Table -->
+    <div class="card table-container">
+        <h2 style="color: #667eea; margin-bottom: 20px; font-size: 1.6em;">All Transactions</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="expense : ${listExpenses}">
+                    <td th:text="${expense.title}">Sample Title</td>
+                    <td>
+                        <span th:if="${expense.category == 'Income'}" style="color: #28a745; font-weight: 600;" th:text="${expense.category}"></span>
+                        <span th:if="${expense.category == 'Expense'}" style="color: #dc3545; font-weight: 600;" th:text="${expense.category}"></span>
+                    </td>
+                    <td style="font-weight: 600;" th:text="'₹ ' + ${#numbers.formatDecimal(expense.amount, 1, 2)}">₹ 0.00</td>
+                    <td th:text="${#temporals.format(expense.date, 'dd-MM-yyyy')}">YYYY-MM-DD</td>
+                    <td class="action-links">
+                        <a class="btn edit" th:href="@{'/edit/' + ${expense.id}}">Edit</a>
+                        <a class="btn delete" th:href="@{'/delete/' + ${expense.id}}">Delete</a>
+                    </td>
+                </tr>
+                <tr th:if="${listExpenses.isEmpty()}">
+                    <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                        <p style="font-size: 1.1em;" th:if="${(searchQuery == null or searchQuery.isEmpty()) and (selectedCategory == null or selectedCategory.isEmpty())}">
+                            No transactions yet. <a th:href="@{/new}" style="color: #667eea; font-weight: 600;">Add one now!</a>
+                        </p>
+                        <p style="font-size: 1.1em;" th:if="${(searchQuery != null and !searchQuery.isEmpty()) or (selectedCategory != null and !selectedCategory.isEmpty())}">
+                            No matching transactions found. Try changing your filter.
+                        </p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Chart Script -->
+<script th:inline="javascript">
+    const income = /*[[${totalIncome}]]*/ 0;
+    const expense = /*[[${totalExpense}]]*/ 0;
+
+    const ctx = document.getElementById('expensePieChart').getContext('2d');
+    const incomeExpenseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Income', 'Expense'],
+            datasets: [{
+                label: 'Amount',
+                data: [income, expense],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',   // green for income
+                    'rgba(220, 53, 69, 0.8)'    // red for expense
+                ],
+                borderColor: [
+                    'rgba(40, 167, 69, 1)',
+                    'rgba(220, 53, 69, 1)'
+                ],
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: {
+                            size: 14,
+                            weight: '600'
+                        },
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 13 },
+                    callbacks: {
+                        label: function(context) {
+                            return '₹ ' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

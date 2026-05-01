@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${expense.id != null} ? 'Edit Expense' : 'Add Expense'">Add Expense</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+    <div class="expense-form-wrapper">
+        <div class="expense-form-container">
+            <div class="form-header">
+                <h1 th:text="${expense.id != null} ? 'Edit Transaction' : 'Add New Transaction'"></h1>
+                <p class="form-subtitle">Manage your income and expenses</p>
+            </div>
+
+            <form th:action="@{/save}" th:object="${expense}" method="post" class="expense-form">
+                <input type="hidden" th:field="*{id}" />
+
+                <div class="form-group">
+                    <label for="title">Title/Description</label>
+                    <input type="text" id="title" th:field="*{title}" class="form-control" 
+                           placeholder="e.g., Grocery shopping, Monthly salary" required />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group form-group-half">
+                        <label for="category">Category</label>
+                        <select id="category" th:field="*{category}" class="form-control" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="Income" th:selected="${expense.category == 'Income'}">Income</option>
+                            <option value="Expense" th:selected="${expense.category == 'Expense'}">Expense</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group form-group-half">
+                        <label for="amount">Amount</label>
+                        <div class="currency-input">
+                            <span class="currency-symbol">₹</span>
+                            <input type="number" id="amount" step="0.01" th:field="*{amount}" class="form-control" 
+                                   placeholder="0.00" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date" th:field="*{date}" class="form-control" required />
+                </div>
+
+                <div class="form-actions expense-form-actions">
+                    <button type="submit" class="btn btn-primary">Save Transaction</button>
+                    <a class="btn btn-secondary" th:href="@{/}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
